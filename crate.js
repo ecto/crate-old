@@ -121,16 +121,8 @@ var crate = {
   // return full path of file
   resolvePath: function(name){
     try {
-      /*
-      if (require.paths && require.paths.indexOf(crate.dir) == -1) {
-        require.paths.unshift(crate.dir);
-      } else if (process.env.NODE_PATH.indexOf(crate.dir)) {
-        process.env.NODE_PATH = crate.dir + ':' + process.env.NODE_PATH;
-      }
-      */
-      var paths = m._nodeModulePaths(process.cwd()),
+      var paths = m._nodeModulePaths(crate.dir),
           mega = m._paths.concat(paths);
-      //var modulePath = require.resolve(name);
       var modulePath = m._findPath(name, mega);
     } finally {
       return modulePath || '';
