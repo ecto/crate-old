@@ -13,7 +13,7 @@
   },
   "bin": {
     "crate": "bin/crate.js"
-  }
+  },
   "dependencies": {},
   "devDependencies": {}
 }
