@@ -1,6 +1,7 @@
 
 var fs = require('fs'),
-    path = require('path');
+    path = require('path'),
+    m = require('module');
 
 var crate = {
   dir: __dirname,
@@ -31,15 +32,22 @@ var crate = {
     });
   },
 
-  filter: function(){
-    for (var i in requires) {
-      var modulePath = crate.resolvePath(requires[i]);
-      var requirement = {
-        name: requires[i],
-        path: modulePath
+  resolve: function(reqs, exclude){
+    var exclude = exclude || true,
+        full = [];
+    for (var i in reqs) {
+      var modulePath = crate.resolvePath(reqs[i]);
+      if ((exclude && modulePath.indexOf('/') != -1) || !modulePath) {
+        var modulePath = crate.resolvePath(reqs[i]);
+        if (!modulePath) continue;
+        var requirement = {
+          name: reqs[i],
+          path: modulePath
+        }
+        full.push(requirement);
       }
-      requires[i] = requirement;
     }
+    return full;
   },
 
   crawl: function(dir, cb){
@@ -113,12 +121,17 @@ var crate = {
   // return full path of file
   resolvePath: function(name){
     try {
+      /*
       if (require.paths && require.paths.indexOf(crate.dir) == -1) {
         require.paths.unshift(crate.dir);
       } else if (process.env.NODE_PATH.indexOf(crate.dir)) {
         process.env.NODE_PATH = crate.dir + ':' + process.env.NODE_PATH;
       }
-      var modulePath = require.resolve(name);
+      */
+      var paths = m._nodeModulePaths(process.cwd()),
+          mega = m._paths.concat(paths);
+      //var modulePath = require.resolve(name);
+      var modulePath = m._findPath(name, mega);
     } finally {
       return modulePath || '';
     }
