@@ -5,13 +5,41 @@ var fs = require('fs'),
 var crate = {
   dir: __dirname,
   hidden: false,
+  blacklist: ['fs', 'module'],
 
-  analyze: function(dir){
+  analyze: function(dir, cb){
     var paths = [];
     crate.dir = dir || __dirname;
     crate.crawl(function(files){
-      console.log(files);
+      var requires = [],
+          inspectors = 0;
+      for (var i in files) {
+        inspectors++;
+        crate.inspectFile(files[i], function(reqs){
+          inspectors--;
+          for (var i in reqs) {
+            if (requires.indexOf(reqs[i]) == -1) requires.push(reqs[i]);
+          }
+        });
+      }
+      setInterval(function(){
+        if (inspectors == 0) {
+          cb(requires);
+          clearInterval(this);
+        }
+      }, 1);
     });
+  },
+
+  filter: function(){
+    for (var i in requires) {
+      var modulePath = crate.resolvePath(requires[i]);
+      var requirement = {
+        name: requires[i],
+        path: modulePath
+      }
+      requires[i] = requirement;
+    }
   },
 
   crawl: function(dir, cb){
@@ -65,17 +93,35 @@ var crate = {
   },
 
   // inspect a js file and return an array of dependencies
-  inspect: function(){
-
+  inspectFile: function(file, cb){
+    fs.readFile(file, function(err, data){
+      var reqs = [],
+          data = data.toString(),
+          matcher = /require\([\'|\"]?((?:[a-zA-Z0-9]+))[?\'|\"]?\)/gi,
+          match;
+      while (match = matcher.exec(data)) {
+        if (match[1]) reqs.push(match[1].replace(/\'/g,'').replace(/\"/g,''));
+      }
+      cb(reqs);
+    });
   },
 
-  resolveVersion: function(){
 
+  resolveVersion: function(name){
   },
   
   // return full path of file
-  resolvePath: function(){
-
+  resolvePath: function(name){
+    try {
+      if (require.paths && require.paths.indexOf(crate.dir) == -1) {
+        require.paths.unshift(crate.dir);
+      } else if (process.env.NODE_PATH.indexOf(crate.dir)) {
+        process.env.NODE_PATH = crate.dir + ':' + process.env.NODE_PATH;
+      }
+      var modulePath = require.resolve(name);
+    } finally {
+      return modulePath || '';
+    }
   },
 
   save: function(){
