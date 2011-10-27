@@ -197,7 +197,7 @@ var crate = {
     } else {
       if (!package.dependencies) package.dependencies = {};
       for (var i in deps) {
-        if (!package.dependencies[deps[i].name]) {
+        if (!package.dependencies[deps[i].name] && package.name != deps[i].name) {
           package.dependencies[deps[i].name] = deps[i].version;
         }
       }
