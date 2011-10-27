@@ -201,7 +201,8 @@ var crate = {
           package.dependencies[deps[i].name] = deps[i].version;
         }
       }
-      fs.writeFileSync(packagePath, JSON.stringify(package));
+      var result = JSON.stringify(package, null, 2);
+      fs.writeFileSync(packagePath, result);
       cb(e, package);
     }
   }
