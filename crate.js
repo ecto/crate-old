@@ -32,22 +32,41 @@ var crate = {
     });
   },
 
-  resolve: function(reqs, exclude){
+  resolve: function(reqs, exclude, cb){
+    if (exclude && typeof exclude == 'function' && !cb) {
+      cb = exclude;
+      exclude = true;
+    }
+    if (!cb) throw new Error('Must provide callback to resolve()');
     var exclude = exclude || true,
-        full = [];
+        full = [],
+        resolvers = 0;
     for (var i in reqs) {
-      var modulePath = crate.resolvePath(reqs[i]);
+      var moduleName = reqs[i],
+          modulePath = crate.resolvePath(moduleName);
       if ((exclude && modulePath.indexOf('/') != -1) || !modulePath) {
-        var modulePath = crate.resolvePath(reqs[i]);
+        var modulePath = crate.resolvePath(moduleName);
         if (!modulePath) continue;
-        var requirement = {
-          name: reqs[i],
-          path: modulePath
-        }
-        full.push(requirement);
+        resolvers++;
+        crate.resolvePackage(modulePath, function(err, module){
+          if (err) console.log(err);
+          if (module && module.name && module.version) {
+            var requirement = {
+              name: module.name,
+              version: module.version
+            }
+            full.push(requirement);
+          }
+          resolvers--;
+        });
       }
     }
-    return full;
+    setInterval(function(){
+      if (resolvers == 0) {
+        clearInterval(this);
+        cb(null, full);
+      }
+    }, 1);
   },
 
   crawl: function(dir, cb){
@@ -115,7 +134,21 @@ var crate = {
   },
 
 
-  resolveVersion: function(name){
+  resolvePackage: function(file, cb){
+    fs.readFile(file, function(err, data){
+      var e = null;
+      if (err) {
+        cb(err);
+        return;
+      }
+      data = data.toString();
+      try {
+        data = JSON.parse(data);
+      } catch (e) {
+        e = 'Could not parse package.json for ' + file;
+      }
+      cb(e, data);
+    });
   },
   
   // return full path of file
@@ -125,7 +158,28 @@ var crate = {
           mega = m._paths.concat(paths);
       var modulePath = m._findPath(name, mega);
     } finally {
-      return modulePath || '';
+      if (!modulePath) return '';
+      var raw = modulePath.split('/'),
+          possible = [],
+          package;
+      raw.pop();
+      possible.push(raw.join('/') + '/package.json');
+      raw.pop();
+      possible.push(raw.join('/') + '/package.json');
+      raw.pop();
+      possible.push(raw.join('/') + '/package.json');
+      do {
+        var stat;
+        try {
+          var possiblePath = possible.shift();
+              stat = fs.statSync(possiblePath);
+        } catch(e) {
+
+        } finally {
+          if (stat && stat.isFile()) package = possiblePath;
+        }
+      } while (!package)
+      return package || '';
     }
   },
 
