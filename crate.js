@@ -183,8 +183,27 @@ var crate = {
     }
   },
 
-  save: function(){
-
+  save: function(deps, cb){
+    var packagePath = crate.dir + '/package.json',
+        e;
+    try {
+      var package = fs.readFileSync(packagePath);
+      package = JSON.parse(package.toString());
+    } catch (e) {
+      e = 'Could not read package.json at ' + packagePath;
+    }
+    if (e) {
+      cb(e);
+    } else {
+      if (!package.dependencies) package.dependencies = {};
+      for (var i in deps) {
+        if (!package.dependencies[deps[i].name]) {
+          package.dependencies[deps[i].name] = deps[i].version;
+        }
+      }
+      fs.writeFileSync(packagePath, JSON.stringify(package));
+      cb(e, package);
+    }
   }
 }
 
